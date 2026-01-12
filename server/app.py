@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
+
 from flask import Flask, request, make_response, jsonify
-from flask_cors import CORS
 from flask_migrate import Migrate
+from flask_cors import CORS
 
 from models import db, Message
 
@@ -14,13 +16,54 @@ migrate = Migrate(app, db)
 
 db.init_app(app)
 
-@app.route('/messages')
-def messages():
-    return ''
+@app.route('/')
+def index():
+    return '<h1>Message Board App</h1>'
 
-@app.route('/messages/<int:id>')
-def messages_by_id(id):
-    return ''
+@app.route('/messages', methods=['GET', 'POST'])
+def messages():
+    if request.method == 'GET':
+        # Return all messages ordered by created_at ascending
+        messages = Message.query.order_by(Message.created_at).all()
+        messages_dict = [m.to_dict() for m in messages]
+        return make_response(messages_dict, 200)
+
+    elif request.method == 'POST':
+        # Get raw JSON data from the request body
+        data = request.get_json()
+        
+        try:
+            new_message = Message(
+                body=data.get('body'),
+                username=data.get('username')
+            )
+            db.session.add(new_message)
+            db.session.commit()
+            return make_response(new_message.to_dict(), 201)
+        except Exception as e:
+            return make_response({'error': 'Could not create message'}, 400)
+
+@app.route('/messages/<int:id>', methods=['PATCH', 'DELETE'])
+def message_by_id(id):
+    message = Message.query.filter(Message.id == id).first()
+
+    if not message:
+        return make_response({'error': 'Message not found'}, 404)
+
+    if request.method == 'PATCH':
+        data = request.get_json()
+        
+        # Update body if it exists in the request
+        if 'body' in data:
+            message.body = data['body']
+        
+        db.session.commit()
+        return make_response(message.to_dict(), 200)
+
+    elif request.method == 'DELETE':
+        db.session.delete(message)
+        db.session.commit()
+        return make_response({}, 200)
 
 if __name__ == '__main__':
-    app.run(port=5555)
+    app.run(port=5555, debug=True)

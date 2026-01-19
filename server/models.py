@@ -15,7 +15,7 @@ class Message(db.Model, SerializerMixin):
     body = db.Column(db.String, nullable=False)
     username = db.Column(db.String, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
 
     def __repr__(self):
         return f'<Message {self.id} {self.username}>'

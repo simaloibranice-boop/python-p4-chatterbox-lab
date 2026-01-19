@@ -16,6 +16,12 @@ migrate = Migrate(app, db)
 
 db.init_app(app)
 
+with app.app_context():
+    db.create_all()
+    if Message.query.first() is None:
+        from seed import make_messages
+        make_messages()
+
 @app.route('/')
 def index():
     return '<h1>Message Board App</h1>'
@@ -26,7 +32,7 @@ def messages():
         # Return all messages ordered by created_at ascending
         messages = Message.query.order_by(Message.created_at).all()
         messages_dict = [m.to_dict() for m in messages]
-        return make_response(messages_dict, 200)
+        return make_response(jsonify(messages_dict), 200)
 
     elif request.method == 'POST':
         # Get raw JSON data from the request body
@@ -39,8 +45,8 @@ def messages():
             )
             db.session.add(new_message)
             db.session.commit()
-            return make_response(new_message.to_dict(), 201)
-        except Exception as e:
+            return make_response(jsonify(new_message.to_dict()), 201)
+        except Exception:
             return make_response({'error': 'Could not create message'}, 400)
 
 @app.route('/messages/<int:id>', methods=['PATCH', 'DELETE'])
@@ -58,7 +64,7 @@ def message_by_id(id):
             message.body = data['body']
         
         db.session.commit()
-        return make_response(message.to_dict(), 200)
+        return make_response(jsonify(message.to_dict()), 200)
 
     elif request.method == 'DELETE':
         db.session.delete(message)
